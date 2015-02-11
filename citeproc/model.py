@@ -94,7 +94,37 @@ class CitationStylesElement(SomewhatObjectifiedElement):
         return self.preformat(unicodedata.lookup(name))
 
     def render(self, *args, **kwargs):
-        return self.markup(self.process(*args, **kwargs))
+        text = self.process(*args, **kwargs)
+
+        context = kwargs.get('context')
+        if context is not None and text is not None and isinstance(text, str):
+            is_last_child = True if self.getnext() is None else False
+            is_first_child = True if self.getprevious() is None else False
+
+            suffix = context.attrib.get('suffix')
+            prefix = context.attrib.get('prefix')
+
+            # import pdb; pdb.set_trace()
+
+
+            if suffix and text[-1] == suffix[0]:
+
+                import pdb; pdb.set_trace()
+                context.attrib['suffix'] = suffix[1:]
+            # import pdb; pdb.set_trace()
+            if prefix and text[0] == prefix[-1]:
+
+                import pdb; pdb.set_trace()
+                context.attrib['prefix'] = prefix[:-1]
+
+
+
+        # context = kwargs.get('context')
+        # if context is not None and 'suffix' in context.keys():
+        #     suffix = kwargs['context'].attrib['suffix']
+        #     if text[-1] == suffix[0]:
+        #         kwargs['context'].attrib['suffix'] = suffix[1:]
+        return self.markup(text)
 
     # TODO: Locale methods
     def get_term(self, name, form=None):
@@ -260,13 +290,32 @@ class Bibliography(FormattingInstructions, CitationStylesElement):
 
 class Formatted(object):
     def format(self, string):
+        """Apply format methods as specified by the formatter"""
         if isinstance(string, (int, float)):
             string = str(string)
+
+        # Must happen before this
+
+
         text = self.font_style(string)
         text = self.font_variant(text)
         text = self.font_weight(text)
         text = self.text_decoration(text)
         text = self.vertical_align(text)
+        # if isinstance(text, list):
+        #     print(repr(text))
+        #     for x in text:
+        #         print(x)
+            # for index in range(len(text) - 1):
+            #     first = text[index]
+            #     second = text[index+1]
+            #     print('{}|{}'.format(first, second))
+            #     if first[-1] == second[0]:
+            #         text[index] = first[:-1]
+            # print(repr(text))
+            # print("--")
+
+
         return text
 
     def font_style(self, text):
@@ -323,10 +372,11 @@ class Formatted(object):
 
 class Affixed(object):
     def wrap(self, string):
+        """Apply prefixes and suffixes to a rendered string"""
         if string is not None:
             prefix = self.get('prefix', '')
             suffix = self.get('suffix', '')
-            return prefix + string + suffix
+            return prefix + string + suffix #NOTE
         return None
 
 
@@ -672,6 +722,7 @@ class Text(CitationStylesElement, Formatted, Affixed, Quoted, TextCased,
             text = self._variable(item, context)
         elif 'macro' in self.attrib:
             text = self.get_macro(self.get('macro')).render(item, context)
+            #NOTE: self.get_macro returns a model.Macro instance
         elif 'term' in self.attrib:
             text = self._term(item)
         elif 'value' in self.attrib:
@@ -1095,6 +1146,7 @@ class Names(CitationStylesElement, Parent, Formatted, Affixed, Delimited):
             raise VariableError
 
     def markup(self, text):
+        """Apply markup as specified in the formatter"""
         if text:
             return self.wrap(self.format(text))
         else:
